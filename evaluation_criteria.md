@@ -121,17 +121,25 @@ This document assesses the **Real Estate Valuation & Bidding Strategy Agent** ag
    - The agent is actively deployed to Vertex AI Agent Runtime (`projects/507598745861/locations/us-east1/reasoningEngines/2363050599206879232`).
    - Platform telemetry is enabled (`GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY: true`).
    - All runtime executions, container logs, and tool invocations stream directly to Google Cloud Logging: [View Logs in Google Cloud Console](https://console.cloud.google.com/logs/query;query=resource.labels.reasoning_engine_id%3D%222363050599206879232%22?project=l200-agent).
-2. **Local Traces & Audit Logs**:
+2. **OpenTelemetry GenAI Experimental Semantic Conventions**:
+   - Configured per official Google Cloud documentation (`ai-agent-adk` standard):
+     - `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`: Enables the latest standardized GenAI semantic conventions.
+     - `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY`: Captures full prompts and LLM responses in Cloud Logging events attached directly to spans without hitting span attribute byte limits or leaking into top-level spans.
+     - `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false`: Prevents 128-byte span attribute truncation and prevents PII leakage into span attributes.
+     - `OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true`: Automatically correlates application log entries with active Cloud Trace IDs.
+     - `OTEL_SERVICE_NAME=real-estate-agent`: Dedicated service name for Cloud Trace explorer filtering.
+3. **Local Traces & Audit Logs**:
    - `agents-cli eval run` generates full JSON traces in `artifacts/traces/traces_*.json` capturing all LLM prompts, tool invocations, arguments, and outputs.
    - Interactive HTML grade reports generated in `artifacts/grade_results/results_*.html`.
-3. **OpenTelemetry & Cloud Logging Integration**:
+4. **OpenTelemetry & Cloud Logging Integration**:
    - [`app/fast_api_app.py`](file:///home/admin_/real-estate-agent/app/fast_api_app.py) configures `google_cloud_logging.Client()` and provides a `/feedback` endpoint for logging structured user feedback.
    - `get_fast_api_app` is initialized with `otel_to_cloud=True`.
    - `pyproject.toml` includes OpenTelemetry GCP trace exporters and Google GenAI instrumentation.
 
 ### What Is Not Covered Yet:
+- **Outbound HTTP Network Spans**: Detailed network-level child spans for external HTTP calls to Daft.ie and the Irish Property Price Register (can be added via `opentelemetry-instrumentation-aiohttp-client`).
+- **Domain-Specific Business Metrics**: Custom OpenTelemetry meters for PPR query duration and valuation metrics.
 - **BigQuery Agent Analytics**: The BigQuery Agent Analytics plugin (`--bq-analytics`) is not installed or configured.
-- **Application Performance Metrics**: No OpenTelemetry or Prometheus metrics exported for custom request latency percentiles (p50/p95/p99) or token cost attribution dashboards.
 
 ---
 

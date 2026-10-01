@@ -59,12 +59,11 @@ resource "google_vertex_ai_reasoning_engine" "app" {
         value = "real-estate-agent"
       }
 
-      # Prompt/response content capture, off by default. Go: set "true" to log
-      # content to OTLP log events for the completions view. Python: content goes to
-      # GCS via the completion hook, so NO_CONTENT.
+      # Prompt/response content capture as events in Cloud Trace and Cloud Logging
+      # per Google Cloud ADK telemetry documentation:
       env {
         name  = "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"
-        value = "NO_CONTENT"
+        value = "EVENT_ONLY"
       }
 
       env {
@@ -75,6 +74,11 @@ resource "google_vertex_ai_reasoning_engine" "app" {
       env {
         name  = "OTEL_SEMCONV_STABILITY_OPT_IN"
         value = "gen_ai_latest_experimental"
+      }
+
+      env {
+        name  = "OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED"
+        value = "true"
       }
 
       env {
