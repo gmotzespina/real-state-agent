@@ -50,10 +50,15 @@ graph TD
     MultiAgentCore -.-> Telemetry
 ```
 
-### Multi-Agent Components:
-- **`root_agent` (`app/agent.py`)**: Top-level coordinator that enforces a mandatory 3-stage execution pipeline (Research $\rightarrow$ Valuation & Strategy $\rightarrow$ Synthesis). Injects recalled memory preferences and triggers cross-session memory synthesis.
-- **`property_researcher` (`app/agent.py`)**: Sub-agent dedicated to extracting listing details and querying historical comps from the Property Price Register.
-- **`valuation_strategist` (`app/agent.py`)**: Specialized LLM agent analyzing comps, calculating square-meter benchmarks, and creating disciplined bidding rules.
+### Multi-Agent Components & Tiered Model Allocation:
+- **`root_agent` (`app/agent.py`)** — **Model: `gemini-2.5-pro` (Flagship Reasoning Tier)**
+  - Top-level coordinator that enforces a mandatory 3-stage execution pipeline (Research $\rightarrow$ Valuation & Strategy $\rightarrow$ Synthesis).
+  - Handles cross-session memory recall (`PreloadMemoryTool`), intent clarification, adversarial safety guards, and synthesis of final advisory reports.
+- **`property_researcher` (`app/agent.py`)** — **Model: `gemini-3.5-flash-lite` (Ultra-Fast Tool Calling Tier)**
+  - Sub-agent dedicated to extracting listing details via `fetch_listing_page` and querying historical comps from the Property Price Register via `query_property_price_register`.
+  - Optimized for sub-second (~0.43s) latency and cost-efficient structured function calling.
+- **`valuation_strategist` (`app/agent.py`)** — **Model: `gemini-3.6-flash` (Analytical / Financial Tier)**
+  - Specialized financial reasoning agent analyzing comps, calculating price/sqm benchmarks, adjusting for BER/inflation, and computing disciplined 3-tier valuation bounds and tactical bidding ladders.
 
 ### Serving Surfaces:
 - **FastAPI / ADK Web (`app/fast_api_app.py`)**: Serves the agent over standard HTTP/REST with Server-Sent Events (SSE) streaming and interactive playground UI.
