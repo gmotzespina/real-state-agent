@@ -211,3 +211,5 @@ credentials*.json
 # Evaluation Run Traces & Results
 artifacts/traces/
 artifacts/grade_results/
+deployment_metadata.json.lock
+
