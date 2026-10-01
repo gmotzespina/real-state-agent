@@ -1,0 +1,26 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "shelbourne_village_d04hv00",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Please analyze this house listing: 65 Shelbourne Village, Ringsend Road, Dublin 4, Eircode D04HV00. It is a 2-bedroom home currently asking €460,000. Please check the Property Price Register for past sales of this house and comparable sales in the area, and provide a fair price valuation report and bidding strategy."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "area_comps_morehampton_road",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "I am looking at a house on Morehampton Road, Donnybrook, Dublin 4 listed for €750,000. Check the Property Price Register for recent sales on Morehampton Road and provide an estimated fair price range and a bidding strategy."
+          }
+        ]
+      }
+    }
+  ]
+}
