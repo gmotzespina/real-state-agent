@@ -2,12 +2,16 @@
 
 import json
 import re
+import time
 import urllib.parse
 from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup
 from google.adk.tools import ToolContext
+from opentelemetry import trace
+
+from app.app_utils import telemetry
 
 
 def fetch_listing_page(
@@ -35,7 +39,12 @@ def fetch_listing_page(
         - property_type: Detected property type (e.g. apartment, terraced house, semi-detached)
         - text_content: Cleaned readable text of the listing
     """
+    current_span = trace.get_current_span()
+    if current_span and current_span.is_recording():
+        current_span.set_attribute("real_estate.listing.url", url)
+
     if not url.startswith("http://") and not url.startswith("https://"):
+        telemetry.listing_fetch_counter.add(1, {"status": "error_invalid_url"})
         return {
             "status": "error",
             "message": "Invalid URL format. URL must start with http:// or https://",
@@ -57,6 +66,9 @@ def fetch_listing_page(
             resp = client.get(url)
 
         if resp.status_code != 200:
+            telemetry.listing_fetch_counter.add(
+                1, {"status": f"http_{resp.status_code}"}
+            )
             return {
                 "status": "error",
                 "status_code": resp.status_code,
@@ -146,9 +158,21 @@ def fetch_listing_page(
                 analyzed.append(title)
                 tool_context.state["session:analyzed_properties"] = analyzed
 
+        telemetry.listing_fetch_counter.add(1, {"status": "success"})
+        if current_span and current_span.is_recording():
+            if asking_price:
+                current_span.set_attribute(
+                    "real_estate.listing.asking_price", str(asking_price)
+                )
+            if detected_eircode:
+                current_span.set_attribute(
+                    "real_estate.listing.eircode", str(detected_eircode)
+                )
+
         return result
 
     except Exception as exc:
+        telemetry.listing_fetch_counter.add(1, {"status": "error_exception"})
         return {
             "status": "error",
             "url": url,
@@ -191,6 +215,11 @@ def query_property_price_register(
     if not address_clean:
         return {"status": "error", "message": "Search address cannot be empty."}
 
+    current_span = trace.get_current_span()
+    if current_span and current_span.is_recording():
+        current_span.set_attribute("real_estate.ppr.query", address)
+        current_span.set_attribute("real_estate.ppr.county", county)
+
     # Detect if search term is an Eircode
     eircode_match = re.search(
         r"\b([AC-FHKNPRTV-Y]\d{2})\s?([0-9AC-FHKNPRTV-Y]{4})\b",
@@ -222,11 +251,17 @@ def query_property_price_register(
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
 
+    start_time = time.perf_counter()
     try:
         with httpx.Client(
             headers=headers, follow_redirects=True, timeout=20.0
         ) as client:
             resp = client.get(url)
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+        telemetry.ppr_query_duration_ms.record(
+            elapsed_ms, {"county": county, "status": str(resp.status_code)}
+        )
 
         if resp.status_code != 200:
             return {
@@ -275,6 +310,9 @@ def query_property_price_register(
             )
 
         if not transactions:
+            telemetry.ppr_comps_retrieved.record(0, {"county": county})
+            if current_span and current_span.is_recording():
+                current_span.set_attribute("real_estate.ppr.comps_count", 0)
             return {
                 "status": "not_found",
                 "query": address,
@@ -283,6 +321,10 @@ def query_property_price_register(
                 "transactions": [],
                 "message": f"No transactions returned for query '{address}'.",
             }
+
+        telemetry.ppr_comps_retrieved.record(len(transactions), {"county": county})
+        if current_span and current_span.is_recording():
+            current_span.set_attribute("real_estate.ppr.comps_count", len(transactions))
 
         result = {
             "status": "success",
@@ -298,6 +340,10 @@ def query_property_price_register(
         return result
 
     except Exception as exc:
+        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+        telemetry.ppr_query_duration_ms.record(
+            elapsed_ms, {"county": county, "status": "exception"}
+        )
         return {
             "status": "error",
             "message": f"Error querying Property Price Register: {exc!s}",
