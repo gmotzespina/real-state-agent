@@ -114,21 +114,24 @@ This document assesses the **Real Estate Valuation & Bidding Strategy Agent** ag
 
 ## 4. Observability & Tracing
 
-### Status: Partially Covered
+### Status: Strongly Covered (Live in Production)
 
 ### How It Is Already Covered:
-1. **Local Traces & Audit Logs**:
+1. **Live Cloud Logging & Telemetry on Vertex AI Agent Runtime**:
+   - The agent is actively deployed to Vertex AI Agent Runtime (`projects/507598745861/locations/us-east1/reasoningEngines/2363050599206879232`).
+   - Platform telemetry is enabled (`GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY: true`).
+   - All runtime executions, container logs, and tool invocations stream directly to Google Cloud Logging: [View Logs in Google Cloud Console](https://console.cloud.google.com/logs/query;query=resource.labels.reasoning_engine_id%3D%222363050599206879232%22?project=l200-agent).
+2. **Local Traces & Audit Logs**:
    - `agents-cli eval run` generates full JSON traces in `artifacts/traces/traces_*.json` capturing all LLM prompts, tool invocations, arguments, and outputs.
-   - HTML grade reports generated in `artifacts/grade_results/results_*.html`.
-2. **OpenTelemetry & Cloud Logging Integration**:
+   - Interactive HTML grade reports generated in `artifacts/grade_results/results_*.html`.
+3. **OpenTelemetry & Cloud Logging Integration**:
    - [`app/fast_api_app.py`](file:///home/admin_/real-estate-agent/app/fast_api_app.py) configures `google_cloud_logging.Client()` and provides a `/feedback` endpoint for logging structured user feedback.
    - `get_fast_api_app` is initialized with `otel_to_cloud=True`.
    - `pyproject.toml` includes OpenTelemetry GCP trace exporters and Google GenAI instrumentation.
 
 ### What Is Not Covered Yet:
-- **Centralized Cloud Trace in Production**: Traces are not actively streaming to Google Cloud Trace console in prototype mode without deployed cloud infrastructure and credentials.
 - **BigQuery Agent Analytics**: The BigQuery Agent Analytics plugin (`--bq-analytics`) is not installed or configured.
-- **Application Performance Metrics**: No OpenTelemetry or Prometheus metrics exported for request latency percentiles (p50/p95/p99), token usage costs, or tool error rates.
+- **Application Performance Metrics**: No OpenTelemetry or Prometheus metrics exported for custom request latency percentiles (p50/p95/p99) or token cost attribution dashboards.
 
 ---
 
