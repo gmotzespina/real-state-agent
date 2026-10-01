@@ -17,9 +17,15 @@ from google.adk.agents import Agent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.apps import App
 from google.adk.models import Gemini
+from google.adk.tools.preload_memory_tool import PreloadMemoryTool
 from google.genai import types
 
-from app.tools import fetch_listing_page, query_property_price_register
+from app.tools import (
+    fetch_listing_page,
+    list_reviewed_properties_memories,
+    query_property_price_register,
+    record_property_review_memory,
+)
 
 MODEL = "gemini-3.6-flash"
 
@@ -85,8 +91,27 @@ Your mission:
    "Disclaimer: This valuation and bidding strategy is an automated informational estimate based on publicly available Property Price Register (PPR) records. It does not constitute a certified survey, structural appraisal, legal, or regulated financial advice."
 """
 
+
+# --- Memory Bank Callback ---
+# This callback triggers memory generation after each agent turn.
+# Session conversation events are shipped to VertexAiMemoryBankService
+# (or InMemoryMemoryService in local/test environments) to extract facts and preferences.
+async def generate_memories_callback(callback_context: CallbackContext) -> None:
+    """Sends the session's events to Memory Bank for cross-session learning."""
+    try:
+        await callback_context.add_session_to_memory()
+    except Exception:
+        # Gracefully handle environments where memory service is unconfigured or mocked
+        pass
+
+
 COORDINATOR_INSTRUCTION = """
 You are an elite Real Estate Advisory Agent for prospective homebuyers in Ireland.
+
+MEMORY & USER PREFERENCES:
+- You maintain cross-session memory via Memory Bank: you remember past properties the user explored, their target areas (e.g. Dublin 4, Ranelagh, Blackrock), desired bedroom counts, property types, and budget limits.
+- Use `PreloadMemoryTool` (injected automatically at turn start) and `list_reviewed_properties_memories` to recall past property searches.
+- When the user asks you to analyze or review a property, ensure its structured details (asking price, size, bedrooms, area, BER) are persisted using `record_property_review_memory` or auto-captured during listing fetches.
 
 CRITICAL WORKFLOW MANDATE:
 Every property analysis query MUST complete BOTH research and valuation stages before responding to the user.
@@ -137,9 +162,16 @@ root_agent = Agent(
     ),
     description="Real estate advisory coordinator for property listing analysis, fair valuation, and bidding strategy.",
     instruction=COORDINATOR_INSTRUCTION,
-    tools=[fetch_listing_page, query_property_price_register],
+    tools=[
+        fetch_listing_page,
+        query_property_price_register,
+        record_property_review_memory,
+        list_reviewed_properties_memories,
+        PreloadMemoryTool(),
+    ],
     sub_agents=[property_researcher, valuation_strategist],
     before_agent_callback=init_session_and_user_state,
+    after_agent_callback=generate_memories_callback,
 )
 
 app = App(

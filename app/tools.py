@@ -12,6 +12,19 @@ from google.adk.tools import ToolContext
 from opentelemetry import trace
 
 from app.app_utils import telemetry
+from app.property_memory import (
+    list_reviewed_properties_memories,
+    record_property_review_memory,
+    save_reviewed_property_record,
+)
+
+__all__ = [
+    "fetch_listing_page",
+    "list_reviewed_properties_memories",
+    "query_property_price_register",
+    "record_property_review_memory",
+    "save_reviewed_property_record",
+]
 
 
 def fetch_listing_page(
@@ -157,6 +170,32 @@ def fetch_listing_page(
             if title and title not in analyzed:
                 analyzed.append(title)
                 tool_context.state["session:analyzed_properties"] = analyzed
+
+        # Automatically store structured property JSON memory
+        try:
+            prop_type = "residential"
+            lower_title = (title or "").lower()
+            if "apartment" in lower_title or "flat" in lower_title:
+                prop_type = "apartment"
+            elif "semi-detached" in lower_title:
+                prop_type = "semi-detached"
+            elif "detached" in lower_title:
+                prop_type = "detached"
+            elif "terraced" in lower_title or "townhouse" in lower_title:
+                prop_type = "terraced"
+
+            prop_memory_data = {
+                "url": url,
+                "title": title,
+                "address": title or url,
+                "eircode": detected_eircode,
+                "asking_price": asking_price,
+                "bedrooms": int(beds) if beds and beds.isdigit() else None,
+                "property_type": prop_type,
+            }
+            save_reviewed_property_record(prop_memory_data, tool_context=tool_context)
+        except Exception:
+            pass
 
         telemetry.listing_fetch_counter.add(1, {"status": "success"})
         if current_span and current_span.is_recording():

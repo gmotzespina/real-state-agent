@@ -1,0 +1,19 @@
+{
+  "property_id": "2_bed_apartment_ballsbridge",
+  "address": "2 Bed Apartment Ballsbridge",
+  "eircode": "",
+  "area": "Ireland",
+  "county": "Dublin",
+  "asking_price_eur": "€495,000",
+  "size_sqm": null,
+  "size_sqft": null,
+  "bedrooms": 2,
+  "bathrooms": null,
+  "property_type": "apartment",
+  "ber_rating": null,
+  "url": "https://www.example.com/property/123",
+  "review_timestamp": "2026-10-01T18:41:45.042142+00:00",
+  "valuation_estimate": null,
+  "bidding_strategy": null,
+  "user_notes": null
+}

@@ -1,0 +1,17 @@
+{
+  "properties": [
+    {
+      "property_id": "2_bed_apartment_ballsbridge",
+      "address": "2 Bed Apartment Ballsbridge",
+      "eircode": "",
+      "area": "Ireland",
+      "asking_price_eur": "€495,000",
+      "bedrooms": 2,
+      "size_sqm": null,
+      "property_type": "apartment",
+      "reviewed_at": "2026-10-01T18:41:45.042142+00:00",
+      "file": "memories/reviewed_properties/2_bed_apartment_ballsbridge.json"
+    }
+  ],
+  "last_updated": "2026-10-01T18:41:45.042142+00:00"
+}
